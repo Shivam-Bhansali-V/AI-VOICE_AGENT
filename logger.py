@@ -21,25 +21,36 @@ SCOPES = [
 
 def get_sheet() -> Any:
     """Authorize and return the first worksheet of the spreadsheet named in SHEET_NAME."""
+    print("[DEBUG] get_sheet() called")
+    print(f"[DEBUG] Environment vars - CREDENTIALS_JSON exists: {'CREDENTIALS_JSON' in os.environ}")
+    print(f"[DEBUG] Environment vars - SHEET_NAME: {os.getenv('SHEET_NAME')}")
+    
     # Try to get credentials from environment variable first (Railway)
     creds_json_str = os.getenv("CREDENTIALS_JSON")
+    print(f"[DEBUG] CREDENTIALS_JSON length: {len(creds_json_str) if creds_json_str else 0}")
     
-    if creds_json_str:
+    if creds_json_str and creds_json_str.strip():
         # Parse JSON from environment variable
         try:
             print("[DEBUG] Using CREDENTIALS_JSON from environment variable")
             creds_dict = json.loads(creds_json_str)
             creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
             print("[DEBUG] Successfully created credentials from JSON")
+        except json.JSONDecodeError as e:
+            print(f"[ERROR] JSON decode error: {e}")
+            print(f"[ERROR] First 100 chars of CREDENTIALS_JSON: {creds_json_str[:100]}")
+            raise RuntimeError(f"Invalid JSON in CREDENTIALS_JSON: {str(e)}")
         except Exception as e:
-            print(f"[ERROR] Error parsing CREDENTIALS_JSON: {e}")
-            raise RuntimeError(f"Invalid CREDENTIALS_JSON environment variable: {str(e)}")
+            print(f"[ERROR] Error parsing CREDENTIALS_JSON: {type(e).__name__}: {e}")
+            raise RuntimeError(f"Invalid CREDENTIALS_JSON: {str(e)}")
     else:
         # Fallback to credentials.json file (local development)
-        print("[DEBUG] CREDENTIALS_JSON not found, trying credentials.json file")
+        print("[DEBUG] CREDENTIALS_JSON not found or empty, trying credentials.json file")
         creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json")
         if not os.path.exists(creds_path):
             print(f"[ERROR] Credentials file not found at: {creds_path}")
+            print(f"[ERROR] Current directory: {os.getcwd()}")
+            print(f"[ERROR] Files in current dir: {os.listdir('.')}")
             raise RuntimeError(f"Credentials file not found: {creds_path}. Set CREDENTIALS_JSON environment variable for Railway.")
         creds = Credentials.from_service_account_file(creds_path, scopes=SCOPES)
         print(f"[DEBUG] Successfully loaded credentials from {creds_path}")
