@@ -8,7 +8,9 @@ import json
 import tempfile
 from typing import Any, Dict
 
-load_dotenv()
+# Load environment variables from multiple sources
+load_dotenv()  # Load from .env (local dev)
+load_dotenv('railway.env')  # Load from railway.env (production/deployment)
 
 app = FastAPI()
 
