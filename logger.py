@@ -46,16 +46,27 @@ def get_sheet() -> Any:
             print(f"[ERROR] Error parsing CREDENTIALS_JSON: {type(e).__name__}: {e}")
             raise RuntimeError(f"Invalid CREDENTIALS_JSON: {str(e)}")
     else:
-        # Fallback to credentials.json file (local development)
-        print("[DEBUG] CREDENTIALS_JSON not found or empty, trying credentials.json file")
-        creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json")
-        if not os.path.exists(creds_path):
-            print(f"[ERROR] Credentials file not found at: {creds_path}")
-            print(f"[ERROR] Current directory: {os.getcwd()}")
-            print(f"[ERROR] Files in current dir: {os.listdir('.')}")
-            raise RuntimeError(f"Credentials file not found: {creds_path}. Set CREDENTIALS_JSON environment variable for Railway.")
-        creds = Credentials.from_service_account_file(creds_path, scopes=SCOPES)
-        print(f"[DEBUG] Successfully loaded credentials from {creds_path}")
+        # Try credentials_runtime.json (Railway deployment)
+        print("[DEBUG] CREDENTIALS_JSON not found or empty, trying credentials_runtime.json")
+        if os.path.exists("credentials_runtime.json"):
+            try:
+                print("[DEBUG] Loading from credentials_runtime.json")
+                creds = Credentials.from_service_account_file("credentials_runtime.json", scopes=SCOPES)
+                print("[DEBUG] Successfully loaded credentials from credentials_runtime.json")
+            except Exception as e:
+                print(f"[ERROR] Error reading credentials_runtime.json: {e}")
+                raise RuntimeError(f"Error reading credentials_runtime.json: {str(e)}")
+        else:
+            # Fallback to credentials.json file (local development)
+            print("[DEBUG] credentials_runtime.json not found, trying credentials.json file")
+            creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json")
+            if not os.path.exists(creds_path):
+                print(f"[ERROR] Credentials file not found at: {creds_path}")
+                print(f"[ERROR] Current directory: {os.getcwd()}")
+                print(f"[ERROR] Files in current dir: {os.listdir('.')}")
+                raise RuntimeError(f"Credentials file not found. Set CREDENTIALS_JSON environment variable or ensure credentials_runtime.json exists.")
+            creds = Credentials.from_service_account_file(creds_path, scopes=SCOPES)
+            print(f"[DEBUG] Successfully loaded credentials from {creds_path}")
     
     client = gspread.authorize(creds)
     sheet_name = os.getenv("SHEET_NAME")

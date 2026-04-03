@@ -3,8 +3,12 @@
 .env.local
 .env.*.local
 
-# Credentials (NEVER commit these!)
+# Credentials (NEVER commit actual credentials!)
+# For local development: Use credentials.json
+# For Railway: credentials_runtime.json gets the real credentials injected at runtime
 credentials.json
+credentials_runtime_real.json
+
 
 # Python
 __pycache__/
