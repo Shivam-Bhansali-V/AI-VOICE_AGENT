@@ -27,23 +27,30 @@ def get_sheet() -> Any:
     if creds_json_str:
         # Parse JSON from environment variable
         try:
+            print("[DEBUG] Using CREDENTIALS_JSON from environment variable")
             creds_dict = json.loads(creds_json_str)
             creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+            print("[DEBUG] Successfully created credentials from JSON")
         except Exception as e:
-            print(f"Error parsing CREDENTIALS_JSON: {e}")
-            raise RuntimeError("Invalid CREDENTIALS_JSON environment variable")
+            print(f"[ERROR] Error parsing CREDENTIALS_JSON: {e}")
+            raise RuntimeError(f"Invalid CREDENTIALS_JSON environment variable: {str(e)}")
     else:
         # Fallback to credentials.json file (local development)
+        print("[DEBUG] CREDENTIALS_JSON not found, trying credentials.json file")
         creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json")
         if not os.path.exists(creds_path):
+            print(f"[ERROR] Credentials file not found at: {creds_path}")
             raise RuntimeError(f"Credentials file not found: {creds_path}. Set CREDENTIALS_JSON environment variable for Railway.")
         creds = Credentials.from_service_account_file(creds_path, scopes=SCOPES)
+        print(f"[DEBUG] Successfully loaded credentials from {creds_path}")
     
     client = gspread.authorize(creds)
     sheet_name = os.getenv("SHEET_NAME")
     if not sheet_name:
         raise RuntimeError("SHEET_NAME environment variable is not set")
+    print(f"[DEBUG] Connecting to sheet: {sheet_name}")
     sheet = client.open(sheet_name).sheet1
+    print("[DEBUG] Successfully connected to Google Sheet")
     return sheet
 
 
@@ -150,3 +157,16 @@ async def vapi_webhook(request: Request) -> Dict[str, Any]:
 @app.get("/")
 def home() -> Dict[str, str]:
     return {"status": "PeakCAT Call Logger is running"}
+
+
+@app.get("/debug")
+def debug() -> Dict[str, str]:
+    """Debug endpoint to check environment variables"""
+    creds_json = os.getenv("CREDENTIALS_JSON")
+    sheet_name = os.getenv("SHEET_NAME")
+    return {
+        "status": "debug",
+        "SHEET_NAME": sheet_name or "NOT SET",
+        "CREDENTIALS_JSON_length": str(len(creds_json)) if creds_json else "NOT SET",
+        "PORT": os.getenv("PORT", "NOT SET")
+    }
