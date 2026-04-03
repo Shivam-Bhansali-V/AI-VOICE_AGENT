@@ -1,0 +1,14 @@
+{
+  "message": {
+    "type": "end-of-call-report",
+    "call": {
+      "customer": {
+        "number": "+919876543210"
+      }
+    },
+    "durationSeconds": 120,
+    "transcript": "User: Hello\nAgent: Hi, would you like a demo?\nUser: Yes, schedule it for Saturday.",
+    "endedReason": "customer-ended-call",
+    "cost": 0.02
+  }
+}
