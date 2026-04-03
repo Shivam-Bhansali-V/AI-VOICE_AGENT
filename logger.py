@@ -4,6 +4,8 @@ import gspread
 from google.oauth2.service_account import Credentials
 from dotenv import load_dotenv
 import os
+import json
+import tempfile
 from typing import Any, Dict
 
 load_dotenv()
@@ -19,8 +21,24 @@ SCOPES = [
 
 def get_sheet() -> Any:
     """Authorize and return the first worksheet of the spreadsheet named in SHEET_NAME."""
-    creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json")
-    creds = Credentials.from_service_account_file(creds_path, scopes=SCOPES)
+    # Try to get credentials from environment variable first (Railway)
+    creds_json_str = os.getenv("CREDENTIALS_JSON")
+    
+    if creds_json_str:
+        # Parse JSON from environment variable
+        try:
+            creds_dict = json.loads(creds_json_str)
+            creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+        except Exception as e:
+            print(f"Error parsing CREDENTIALS_JSON: {e}")
+            raise RuntimeError("Invalid CREDENTIALS_JSON environment variable")
+    else:
+        # Fallback to credentials.json file (local development)
+        creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "credentials.json")
+        if not os.path.exists(creds_path):
+            raise RuntimeError(f"Credentials file not found: {creds_path}. Set CREDENTIALS_JSON environment variable for Railway.")
+        creds = Credentials.from_service_account_file(creds_path, scopes=SCOPES)
+    
     client = gspread.authorize(creds)
     sheet_name = os.getenv("SHEET_NAME")
     if not sheet_name:
