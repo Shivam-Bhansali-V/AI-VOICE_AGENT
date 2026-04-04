@@ -79,40 +79,105 @@ def get_sheet() -> Any:
 
 
 def detect_outcome(transcript: str, end_reason: str) -> str:
-    """Derive a simple outcome label from transcript and end reason."""
-    if not transcript or not transcript.strip():
+    """
+    Derive outcome label from transcript and end reason.
+    
+    Logic:
+    1. Check NEGATIVE phrases first (highest priority)
+    2. Check DEMO with negation detection
+    3. Check POSITIVE phrases
+    4. Check for empty/short transcripts
+    5. Default to Unknown
+    """
+    if not transcript or len(transcript.strip()) < 10:
         return "Wrong Number"
 
     t = transcript.lower()
 
-    # Check for demo booked
-    if "demo" in t:
-        return "Demo Booked"
-
-    # Check for interested
-    if "interested" in t:
-        return "Interested"
-
-    # If the call was explicitly ended by customer, mark Not Interested
-    if end_reason == "customer-ended-call":
+    # ❌ NEGATIVE DETECTION - Check first (highest priority)
+    negative_phrases = [
+        "not interested",
+        "don't want",
+        "do not want",
+        "no thanks",
+        "not now",
+        "already enrolled",
+        "wrong number",
+        "not suitable",
+        "can't help",
+        "busy now",
+        "call later",
+        "remove me",
+        "stop calling"
+    ]
+    if any(phrase in t for phrase in negative_phrases):
+        print(f"[DEBUG] Detected 'Not Interested' - matched negative phrase")
         return "Not Interested"
 
+    # ✅ DEMO DETECTION - with negation checks
+    if "demo" in t:
+        # Check if demo is negated
+        if "no demo" not in t and "don't want demo" not in t and "do not want demo" not in t and "without demo" not in t:
+            print(f"[DEBUG] Detected 'Demo Booked' - found demo keyword")
+            return "Demo Booked"
+
+    # ✅ POSITIVE PHRASES DETECTION
+    positive_phrases = [
+        "interested",
+        "tell me more",
+        "sounds good",
+        "call back",
+        "want to know",
+        "yes please",
+        "absolutely",
+        "definitely",
+        "count me in",
+        "sign me up",
+        "book a demo",
+        "scheduled",
+        "confirmed"
+    ]
+    if any(phrase in t for phrase in positive_phrases):
+        print(f"[DEBUG] Detected 'Interested' - matched positive phrase")
+        return "Interested"
+
+    # If call was ended by customer but no other signals detected
+    # Don't auto-assume "Not Interested" - be conservative
+    if end_reason == "customer-ended-call":
+        print(f"[DEBUG] Call ended by customer but no outcome detected - marking Unknown")
+        # Could be "Not Interested", but without explicit signals, mark Unknown
+        # This avoids false negatives
+        return "Unknown"
+
+    print(f"[DEBUG] No outcome detected - marking Unknown")
     return "Unknown"
 
 
 def create_summary(transcript: str) -> str:
-    """Create a short summary: first 2 meaningful lines or first 200 chars."""
+    """
+    Create a short summary from transcript.
+    
+    Logic:
+    - Takes LAST 2 meaningful lines (end of call has actual outcome)
+    - Not first 2 (which are usually "User: Hello" / "Agent: Hi")
+    - Falls back to last 200 chars if not enough lines
+    - Meaningful = lines with >10 characters
+    """
     if not transcript or not transcript.strip():
         return "No conversation recorded"
 
     lines = [ln.strip() for ln in transcript.splitlines() if ln.strip()]
     meaningful = [l for l in lines if len(l) > 10]
+    
     if meaningful:
-        summary = " | ".join(meaningful[:2])
+        # Take LAST 2 meaningful lines (reversed), then reverse back to maintain order
+        last_two = meaningful[-2:] if len(meaningful) >= 2 else meaningful
+        summary = " | ".join(last_two)
+        print(f"[DEBUG] Summary from last {len(last_two)} lines: {summary[:100]}")
         return summary[:200]
 
-    # fallback to first 200 chars
-    return transcript.strip()[:200]
+    # Fallback to last 200 chars
+    return transcript.strip()[-200:] if len(transcript.strip()) > 200 else transcript.strip()
 
 
 @app.post("/webhook")
@@ -123,11 +188,16 @@ async def vapi_webhook(request: Request) -> Dict[str, Any]:
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON")
 
-    print("FULL DATA:", body)
+    # ⚠️ IMPORTANT: Log full payload on first call to verify Vapi's exact structure
+    print("\n" + "="*80)
+    print("FULL WEBHOOK PAYLOAD FROM VAPI:")
+    print(json.dumps(body, indent=2))
+    print("="*80 + "\n")
 
     # Expecting structure with top-level "message"
     message = body.get("message") or {}
     if not message or message.get("type") != "end-of-call-report":
+        print("[DEBUG] Ignoring non-call-report message")
         return {"status": "ignored"}
 
     # Extract fields from message
@@ -143,10 +213,29 @@ async def vapi_webhook(request: Request) -> Dict[str, Any]:
 
     transcript = message.get("transcript", "") or ""
     end_reason = message.get("endedReason", "unknown")
-    try:
-        cost = round(float(message.get("cost", 0)), 4)
-    except Exception:
-        cost = 0.0
+    
+    # ⚠️ COST FIELD: Log what we find for verification
+    cost = 0.0
+    cost_raw = message.get("cost", None)
+    print(f"[DEBUG] Cost field from Vapi: {cost_raw} (type: {type(cost_raw).__name__})")
+    if cost_raw is not None:
+        try:
+            cost = round(float(cost_raw), 4)
+            print(f"[DEBUG] Successfully parsed cost as: {cost}")
+        except Exception as e:
+            print(f"[ERROR] Could not parse cost '{cost_raw}': {e}")
+            cost = 0.0
+    else:
+        # Try alternative cost field names that Vapi might use
+        for alt_field in ["totalCost", "callCost", "price", "amount"]:
+            alt_cost = message.get(alt_field)
+            if alt_cost is not None:
+                print(f"[DEBUG] Found cost in alternative field '{alt_field}': {alt_cost}")
+                try:
+                    cost = round(float(alt_cost), 4)
+                    break
+                except Exception:
+                    pass
 
     outcome = detect_outcome(transcript, end_reason)
     summary = create_summary(transcript)
