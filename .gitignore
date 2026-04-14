@@ -62,3 +62,6 @@ npm-debug.log
 # Cache
 .cache/
 *.cache
+
+# Nested repos not tracked
+Exotel-Vapi-Connector/
