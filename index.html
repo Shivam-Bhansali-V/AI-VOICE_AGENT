@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shivam Voice AI — AI Call Automation</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0e1a;
+    --bg-2: #111827;
+    --panel: rgba(255, 255, 255, 0.04);
+    --panel-border: rgba(255, 255, 255, 0.08);
+    --accent: #6366f1;
+    --accent-2: #8b5cf6;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 0%, rgba(99, 102, 241, 0.15), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(139, 92, 246, 0.12), transparent);
+    pointer-events: none;
+    z-index: 0;
+  }
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(20px);
+    background: rgba(10, 14, 26, 0.7);
+    border-bottom: 1px solid var(--panel-border);
+    padding: 16px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  nav .brand { font-weight: 700; font-size: 1.1rem; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  nav ul { list-style: none; display: flex; gap: 28px; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 0.95rem; transition: color 0.2s; }
+  nav a:hover { color: var(--text); }
+
+  section { position: relative; z-index: 1; padding: 96px 24px; max-width: 1180px; margin: 0 auto; }
+  .hero { text-align: center; padding-top: 72px; padding-bottom: 120px; }
+  .badge {
+    display: inline-block;
+    padding: 6px 14px;
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 999px;
+    font-size: 0.85rem;
+    color: #a5b4fc;
+    margin-bottom: 24px;
+  }
+  .hero h1 {
+    font-size: clamp(2.2rem, 5vw, 4rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero p {
+    font-size: 1.2rem;
+    color: var(--muted);
+    max-width: 640px;
+    margin: 0 auto 36px;
+  }
+  .cta {
+    display: inline-block;
+    padding: 14px 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff;
+    text-decoration: none;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+  }
+  .cta:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(99, 102, 241, 0.45); }
+
+  .section-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 16px;
+    letter-spacing: -0.02em;
+  }
+  .section-sub { text-align: center; color: var(--muted); margin-bottom: 56px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    padding: 28px;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .card:hover { transform: translateY(-4px); border-color: rgba(99, 102, 241, 0.3); }
+  .card .icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+    margin-bottom: 18px;
+  }
+  .card h3 { font-size: 1.15rem; margin-bottom: 10px; }
+  .card p { color: var(--muted); font-size: 0.95rem; }
+
+  .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; }
+  @media (max-width: 768px) { .about-grid { grid-template-columns: 1fr; } }
+  .about h2 { font-size: 2rem; margin-bottom: 16px; letter-spacing: -0.02em; }
+  .about p { color: var(--muted); margin-bottom: 14px; }
+  .stats { display: flex; gap: 40px; flex-wrap: wrap; margin-top: 24px; }
+  .stat .n { font-size: 2rem; font-weight: 700; color: var(--accent); }
+  .stat .l { font-size: 0.85rem; color: var(--muted); }
+
+  #login { text-align: center; }
+  .login-card {
+    max-width: 420px;
+    margin: 0 auto;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    padding: 36px;
+    backdrop-filter: blur(10px);
+  }
+  .login-card h2 { margin-bottom: 8px; }
+  .login-card > p { color: var(--muted); margin-bottom: 24px; font-size: 0.95rem; }
+  .field { margin-bottom: 16px; text-align: left; }
+  .field label { display: block; font-size: 0.85rem; margin-bottom: 6px; color: var(--muted); }
+  .field input {
+    width: 100%;
+    padding: 12px 14px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+  }
+  .field input:focus { outline: none; border-color: var(--accent); }
+  button {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: transform 0.15s;
+  }
+  button:hover { transform: translateY(-1px); }
+
+  footer {
+    text-align: center;
+    padding: 40px 24px;
+    border-top: 1px solid var(--panel-border);
+    color: var(--muted);
+    font-size: 0.9rem;
+    position: relative;
+    z-index: 1;
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="brand">Shivam Voice AI</div>
+  <ul>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#login">Login</a></li>
+  </ul>
+</nav>
+
+<section class="hero">
+  <div class="badge">Powered by Vapi + Google Sheets</div>
+  <h1>AI-Driven Voice Calls,<br/>Fully Automated</h1>
+  <p>Reach leads, book demos, and track outcomes on autopilot. Every call is transcribed, summarised, and logged in real time.</p>
+  <a class="cta" href="#login">Access Dashboard →</a>
+</section>
+
+<section id="features">
+  <h2 class="section-title">What it does</h2>
+  <p class="section-sub">Built for lead engagement and demo-booking teams.</p>
+  <div class="grid">
+    <div class="card">
+      <div class="icon">📞</div>
+      <h3>Automated Outbound Calls</h3>
+      <p>AI agents place calls, engage leads in natural conversation, and qualify prospects without human effort.</p>
+    </div>
+    <div class="card">
+      <div class="icon">📝</div>
+      <h3>Live Transcription</h3>
+      <p>Every conversation is transcribed in full so you can audit, train, and refine scripts over time.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🧠</div>
+      <h3>AI Summaries</h3>
+      <p>Each call ends with a 2-3 line summary — no more scrolling through transcripts to understand the outcome.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🎯</div>
+      <h3>Outcome Detection</h3>
+      <p>Auto-classifies calls: Enrolled, Demo Booked, Interested, Busy, Not Interested, or Wrong Number.</p>
+    </div>
+    <div class="card">
+      <div class="icon">📊</div>
+      <h3>Google Sheets Integration</h3>
+      <p>All call data — caller, duration, outcome, cost, transcript — is pushed to your sheet in real time.</p>
+    </div>
+    <div class="card">
+      <div class="icon">⚡</div>
+      <h3>Deployed & Always-On</h3>
+      <p>Runs on Railway with auto-restart and zero downtime. Webhook handles every end-of-call event instantly.</p>
+    </div>
+  </div>
+</section>
+
+<section id="about">
+  <div class="about-grid">
+    <div class="about">
+      <h2>Why Shivam Voice AI</h2>
+      <p>Traditional tele-calling is slow, expensive, and inconsistent. Shivam Voice AI replaces the grind with AI agents that work 24/7 — at a fraction of the cost.</p>
+      <p>Every call is captured, analysed, and stored. You get a complete audit trail without lifting a finger.</p>
+      <div class="stats">
+        <div class="stat"><div class="n">24/7</div><div class="l">Availability</div></div>
+        <div class="stat"><div class="n">6</div><div class="l">Outcome Types</div></div>
+        <div class="stat"><div class="n">&lt;1s</div><div class="l">Log Latency</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>How it works</h3>
+      <p>1. Vapi places the call using a configured AI agent.</p>
+      <p>2. At call end, Vapi posts an <code>end-of-call-report</code> to our webhook.</p>
+      <p>3. The server extracts caller, duration, outcome, cost, and Vapi's own summary.</p>
+      <p>4. A new row is appended to your Google Sheet — ready to view on the dashboard.</p>
+    </div>
+  </div>
+</section>
+
+<section id="login">
+  <div class="login-card">
+    <h2>Access Dashboard</h2>
+    <p>Enter your credentials to view live call logs.</p>
+    <form onsubmit="handleLogin(event)">
+      <div class="field">
+        <label for="username">Username</label>
+        <input type="text" id="username" autocomplete="username" required />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" autocomplete="current-password" required />
+      </div>
+      <button type="submit">Continue</button>
+    </form>
+  </div>
+</section>
+
+<footer>
+  © Shivam Voice AI · Built for automated lead engagement
+</footer>
+
+<script>
+  const CREDENTIAL = "Shivam-Voice-AI";
+  function handleLogin(e) {
+    e.preventDefault();
+    const u = document.getElementById("username").value.trim();
+    const p = document.getElementById("password").value.trim();
+    if (u === CREDENTIAL && p === CREDENTIAL) {
+      sessionStorage.setItem("svai_auth", CREDENTIAL);
+      window.location.href = "dashboard.html";
+    } else {
+      alert("Wrong username/password");
+    }
+  }
+</script>
+</body>
+</html>
