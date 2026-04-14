@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Header
+from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import gspread
 from google.oauth2.service_account import Credentials
@@ -6,13 +7,22 @@ from dotenv import load_dotenv
 import os
 import json
 import tempfile
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 # Load environment variables from multiple sources
 load_dotenv()  # Load from .env (local dev)
 load_dotenv('railway.env')  # Load from railway.env (production/deployment)
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+DASHBOARD_TOKEN = os.getenv("DASHBOARD_TOKEN", "Shivam-Voice-AI")
 
 # Google Sheets scopes
 SCOPES = [
@@ -79,79 +89,69 @@ def get_sheet() -> Any:
 
 
 def detect_outcome(transcript: str, end_reason: str) -> str:
-    """
-    Derive outcome label from transcript and end reason.
-    
-    Logic:
-    1. Check NEGATIVE phrases first (highest priority)
-    2. Check DEMO with negation detection
-    3. Check POSITIVE phrases
-    4. Check for empty/short transcripts
-    5. Default to Unknown
-    """
     if not transcript or len(transcript.strip()) < 10:
         return "Wrong Number"
 
-    t = transcript.lower()
+    # Extract ONLY user lines, not AI lines
+    user_lines = []
+    for line in transcript.splitlines():
+        line = line.strip()
+        if line.lower().startswith("user:"):
+            user_lines.append(line.lower())
+    
+    # If no user lines found use full transcript
+    t = " ".join(user_lines) if user_lines else transcript.lower()
 
-    # ❌ NEGATIVE DETECTION - Check first (highest priority)
+    # Check enrollment first — highest priority
+    enrollment_phrases = [
+        "book a seat", "block a seat", "enroll now", 
+        "book now", "sign me up", "join now",
+        "want to join", "i want to book", "go ahead and book",
+        "yes book", "yes enroll", "book the seat"
+    ]
+    if any(phrase in t for phrase in enrollment_phrases):
+        return "Enrolled"
+
+    # Check demo booked
+    demo_phrases = [
+        "demo class", "free demo", "attend demo",
+        "book demo", "schedule demo", "demo please",
+        "yes demo", "okay demo", "sure demo"
+    ]
+    if any(phrase in t for phrase in demo_phrases):
+        return "Demo Booked"
+
+    # Check not interested
     negative_phrases = [
-        "not interested",
-        "don't want",
-        "do not want",
-        "no thanks",
-        "not now",
-        "already enrolled",
-        "wrong number",
-        "not suitable",
-        "can't help",
-        "busy now",
-        "call later",
-        "remove me",
-        "stop calling"
+        "not interested", "no thanks", "wrong number",
+        "stop calling", "don't call", "nahi chahiye",
+        "not for me", "already joined", "no demo",
+        "don't send", "cancel"
     ]
     if any(phrase in t for phrase in negative_phrases):
-        print(f"[DEBUG] Detected 'Not Interested' - matched negative phrase")
         return "Not Interested"
 
-    # ✅ DEMO DETECTION - with negation checks
-    if "demo" in t:
-        # Check if demo is negated
-        if "no demo" not in t and "don't want demo" not in t and "do not want demo" not in t and "without demo" not in t:
-            print(f"[DEBUG] Detected 'Demo Booked' - found demo keyword")
-            return "Demo Booked"
-
-    # ✅ POSITIVE PHRASES DETECTION
-    positive_phrases = [
-        "interested",
-        "tell me more",
-        "sounds good",
-        "call back",
-        "want to know",
-        "yes please",
-        "absolutely",
-        "definitely",
-        "count me in",
-        "sign me up",
-        "book a demo",
-        "scheduled",
-        "confirmed"
+    # Check busy
+    busy_phrases = [
+        "call back", "call later", "busy right now",
+        "abhi nahi", "baad mein", "bad time"
     ]
-    if any(phrase in t for phrase in positive_phrases):
-        print(f"[DEBUG] Detected 'Interested' - matched positive phrase")
+    if any(phrase in t for phrase in busy_phrases):
+        return "Busy"
+
+    # Check interested
+    interested_phrases = [
+        "interested", "tell me more", "sounds good",
+        "want to know", "how much", "fee", "batch",
+        "yes", "okay", "haan", "acha", "sure"
+    ]
+    if any(phrase in t for phrase in interested_phrases):
         return "Interested"
 
-    # If call was ended by customer but no other signals detected
-    # Don't auto-assume "Not Interested" - be conservative
     if end_reason == "customer-ended-call":
-        print(f"[DEBUG] Call ended by customer but no outcome detected - marking Unknown")
-        # Could be "Not Interested", but without explicit signals, mark Unknown
-        # This avoids false negatives
         return "Unknown"
 
-    print(f"[DEBUG] No outcome detected - marking Unknown")
     return "Unknown"
-
 
 def create_summary(transcript: str) -> str:
     """
@@ -238,7 +238,15 @@ async def vapi_webhook(request: Request) -> Dict[str, Any]:
                     pass
 
     outcome = detect_outcome(transcript, end_reason)
-    summary = create_summary(transcript)
+
+    analysis = message.get("analysis") or {}
+    vapi_summary = analysis.get("summary") or message.get("summary")
+    if vapi_summary and str(vapi_summary).strip():
+        summary = str(vapi_summary).strip()[:500]
+        print(f"[DEBUG] Using Vapi-provided summary ({len(summary)} chars)")
+    else:
+        summary = create_summary(transcript)
+        print("[DEBUG] Vapi summary missing; using transcript-based fallback")
 
     now = datetime.now()
     date_str = now.strftime("%Y-%m-%d")
@@ -283,3 +291,35 @@ def debug() -> Dict[str, str]:
         "CREDENTIALS_JSON_length": str(len(creds_json)) if creds_json else "NOT SET",
         "PORT": os.getenv("PORT", "NOT SET")
     }
+
+
+@app.get("/api/logs")
+def api_logs(x_access_token: Optional[str] = Header(None)) -> Dict[str, Any]:
+    """Return call log rows for the dashboard frontend."""
+    if x_access_token != DASHBOARD_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        sheet = get_sheet()
+        values = sheet.get_all_values()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Sheet error: {e}")
+
+    if not values:
+        return {"rows": []}
+
+    # First row is headers
+    data_rows = values[1:] if len(values) > 1 else []
+    rows = []
+    for r in data_rows:
+        r = list(r) + [""] * (8 - len(r))
+        rows.append({
+            "date": r[0],
+            "time": r[1],
+            "caller": r[2],
+            "duration": r[3],
+            "outcome": r[4],
+            "summary": r[5],
+            "cost": r[6],
+            "transcript": r[7],
+        })
+    return {"rows": rows}
