@@ -70,8 +70,3 @@ If you're deploying to Railway, set the same vars in the Railway dashboard and u
 - `credentials.json` contains a private key. Keep it out of public commits.
 - The dashboard's username/password are hardcoded on the frontend — fine for a demo, but move to a real auth check before putting it in front of real users.
 - Before deploying the landing page publicly, add your domain to the allowed origins list for the Vapi public key. Otherwise anyone can trigger calls that bill to your account.
-
-## Built by
-
-Shivam Bhansali · VIT University  
-[LinkedIn](https://www.linkedin.com/in/shivam-bhansali-a868a930b/) · [GitHub](https://github.com/Shivam-Bhansali-V)
