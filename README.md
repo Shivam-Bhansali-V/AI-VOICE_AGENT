@@ -1,42 +1,77 @@
-# PeakCAT Call Logger — quick start
+# PeakCAT Voice AI
 
-This project exposes a webhook (`/webhook`) that logs incoming call reports to a Google Sheet.
+An AI voice agent built for Indian EdTech — places outbound calls, handles a full sales conversation (including Hindi / Hinglish), and logs every call to Google Sheets automatically.
 
-Prerequisites
-- Python 3.9+ installed
-- Google service account JSON in `credentials.json` (already present in the repo)
-- Share the target Google Sheet with the service account email from `credentials.json`
+Live site: https://shivam-bhansali-v.github.io/AI-VOICE_AGENT/
 
-Install dependencies (PowerShell):
+## What it does
 
-```powershell
-python -m pip install --upgrade pip; python -m pip install -r requirements.txt
+- Places outbound calls using **Vapi** with a sales-trained assistant
+- Speaks **multiple Indian languages** (English, Hindi, Hinglish, etc.)
+- Handles common objections like pricing, timing, "thoda sochke bataunga"
+- Detects call outcome (Enrolled, Demo Booked, Interested, Busy, Not Interested, Wrong Number)
+- Logs caller, duration, transcript, summary, outcome, and cost to a Google Sheet the moment the call ends
+- Ships a dashboard (`/dashboard.html`) that reads those logs back in real time
+
+## Tech
+
+| Layer | Using |
+|---|---|
+| Voice orchestration | Vapi |
+| LLM | Groq + Llama 3.3 70B |
+| Speech-to-text | Deepgram Nova-3 |
+| Text-to-speech | Cartesia |
+| Backend | FastAPI (Python) |
+| Logging | Google Sheets API |
+| Deployment | Railway (backend) · GitHub Pages (frontend) |
+
+## Repo layout
+
+```
+main.py            FastAPI app — receives Vapi's end-of-call webhook
+logger.py          Google Sheets client
+index.html         Landing page with demo audio + in-browser call button
+dashboard.html     Live call-log dashboard
+login.html         Dashboard gate
+requirements.txt   Python deps
+Procfile           Railway start command
 ```
 
-Create a `.env` file (copy `.env.example`) and set `SHEET_NAME` to the exact name of your Google Sheet (the name shown in Google Drive).
+## Running locally
 
-Run the app (PowerShell):
+You'll need:
+- Python 3.9+
+- A Google service account JSON (saved as `credentials.json`)
+- The target Google Sheet shared with the service account's `client_email`
 
 ```powershell
-# From project root
-$env:PORT = (Get-Content .env | Select-String "PORT").ToString().Split('=')[1].Trim()  # optional
+python -m pip install -r requirements.txt
 python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Expose the local server publicly (ngrok):
+Expose it publicly so Vapi can hit the webhook:
 
 ```powershell
 ngrok http 8000
 ```
 
-Use the ngrok public URL + `/webhook` as the webhook URL in your vapi provider.
+Then paste `<ngrok-url>/webhook` into your Vapi assistant's server URL.
 
-Notes & checks
-- Ensure `credentials.json` is not shared publicly. It contains a private key.
-- Share the target Google Sheet with the `client_email` value in `credentials.json` (e.g. `peakcat-logger@...`)
-- If your provider sends a different JSON shape, adapt `main.py`/`logger.py` to match the keys.
+## Environment
 
-If you want, I can:
-- Update `main.py` to read credentials from an env var instead of a file.
-- Add better error handling and tests.
-- Deploy this to a small cloud VM or serverless endpoint so you don’t need ngrok.
+Copy `.env.example` to `.env` and set:
+
+- `SHEET_NAME` — exact name of the Google Sheet as it appears in Drive
+
+If you're deploying to Railway, set the same vars in the Railway dashboard and upload `credentials.json` (or pipe its contents through an env var — see `credentials_runtime.json` in `logger.py`).
+
+## Security notes
+
+- `credentials.json` contains a private key. Keep it out of public commits.
+- The dashboard's username/password are hardcoded on the frontend — fine for a demo, but move to a real auth check before putting it in front of real users.
+- Before deploying the landing page publicly, add your domain to the allowed origins list for the Vapi public key. Otherwise anyone can trigger calls that bill to your account.
+
+## Built by
+
+Shivam Bhansali · VIT University  
+[LinkedIn](https://www.linkedin.com/in/shivam-bhansali-a868a930b/) · [GitHub](https://github.com/Shivam-Bhansali-V)
