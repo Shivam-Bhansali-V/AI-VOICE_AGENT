@@ -183,7 +183,7 @@
   // Gate
   const auth = sessionStorage.getItem("svai_auth");
   if (auth !== AUTH_TOKEN) {
-    window.location.href = "index.html";
+    window.location.href = "login.html";
   }
   document.getElementById("userLabel").textContent = "Signed in";
 
@@ -191,7 +191,7 @@
 
   function logout() {
     sessionStorage.removeItem("svai_auth");
-    window.location.href = "index.html";
+    window.location.href = "login.html";
   }
 
   function pillClass(outcome) {

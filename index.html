@@ -204,13 +204,9 @@
   }
   .sheet-img {
     width: 100%;
-    aspect-ratio: 16 / 8;
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(99, 102, 241, 0.08));
     border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--muted);
-    border: 1px dashed var(--panel-border);
-    font-size: 0.95rem;
+    display: block;
+    border: 1px solid var(--panel-border);
   }
   .sheet-caption { text-align: center; color: var(--muted); font-size: 0.9rem; margin-top: 14px; }
 
@@ -367,7 +363,7 @@
     <li><a href="#how">How It Works</a></li>
     <li><a href="#stack">Stack</a></li>
     <li><a href="#usecases">Use Cases</a></li>
-    <li><a href="dashboard.html">Dashboard</a></li>
+    <li><a href="login.html">Dashboard</a></li>
   </ul>
 </nav>
 
@@ -375,7 +371,7 @@
 <section class="hero">
   <div class="badge">Built for Indian EdTech</div>
   <h1>AI Voice Agent That<br/>Sells Like a Human</h1>
-  <p>Built for Indian EdTech — speaks English and Hinglish, handles objections, and logs every call automatically.</p>
+  <p>Built for Indian EdTech — multilingual across Indian languages, handles objections, and logs every call automatically.</p>
   <div class="cta-row">
     <a class="cta" href="#demos">Watch Demo</a>
     <button type="button" class="cta" id="makeCallBtn" style="border:none;cursor:pointer;font-family:inherit;width:auto;">📞 Make a Call</button>
@@ -386,10 +382,16 @@
 <!-- 2. DEMO VIDEOS -->
 <section id="demos">
   <h2 class="section-title">See It In Action</h2>
-  <p class="section-sub">Two real calls — one in English, one in Hinglish — showing the agent handle a full sales conversation end-to-end.</p>
+  <p class="section-sub">Two real calls — one in English, one in Hinglish — showing the agent handle a full sales conversation end-to-end. The agent is multilingual across Indian languages.</p>
   <div class="videos">
     <div class="video-card">
-      <div class="video-placeholder">[ English Demo Video Placeholder ]</div>
+      <div class="video-placeholder audio" style="padding:24px;flex-direction:column;gap:14px;">
+        <div style="font-size:3rem;">🎧</div>
+        <audio controls preload="metadata" style="width:100%;max-width:320px;">
+          <source src="english.wav" type="audio/wav" />
+          Your browser does not support the audio element.
+        </audio>
+      </div>
       <div class="video-body">
         <h3>English Call Demo</h3>
         <ul>
@@ -413,6 +415,7 @@
           <li>Switches between Hindi and English naturally</li>
           <li>Handles "thoda sochke bataunga" objection</li>
           <li>Qualifies the lead and logs outcome</li>
+          <li>At 4:10 — speaks in full Hindi</li>
         </ul>
       </div>
     </div>
@@ -469,7 +472,7 @@
   <div class="metrics">
     <div class="metric"><div class="value">~1100ms</div><div class="label">Average Latency</div></div>
     <div class="metric"><div class="value">19</div><div class="label">Turns Per Conversation</div></div>
-    <div class="metric"><div class="value">2</div><div class="label">Languages Supported</div></div>
+    <div class="metric"><div class="value">Multi</div><div class="label">Indian Languages</div></div>
     <div class="metric"><div class="value">4+</div><div class="label">Outcome Types Tracked</div></div>
   </div>
 </section>
@@ -479,7 +482,7 @@
   <h2 class="section-title">Every Call, Logged Automatically</h2>
   <p class="section-sub">Transcripts, summaries, outcomes, and cost — pushed to Google Sheets the moment the call ends.</p>
   <div class="sheet-wrap">
-    <div class="sheet-img">[ Google Sheet Screenshot Placeholder ]</div>
+    <img class="sheet-img" src="WhatsApp Image 2026-04-19 at 8.47.05 PM.jpeg" alt="Google Sheet call log screenshot" loading="lazy" />
     <div class="sheet-caption">Live call logs from the deployed system · phone numbers redacted</div>
   </div>
 </section>
@@ -516,14 +519,14 @@
     <p>I enjoy working on projects that go beyond theory and have real-world impact. I'm continuously exploring advanced areas like reinforcement learning and deep learning to sharpen my skills.</p>
     <div class="about-links">
       <a href="https://github.com/Shivam-Bhansali-V/AI-VOICE_AGENT" target="_blank" rel="noopener">GitHub →</a>
-      <a href="#" target="_blank" rel="noopener">LinkedIn →</a>
+      <a href="https://www.linkedin.com/in/shivam-bhansali-a868a930b/" target="_blank" rel="noopener">LinkedIn →</a>
     </div>
   </div>
 </section>
 
 <footer>
   © PeakCAT Voice AI · Built by Shivam Bhansali
-  <a href="dashboard.html">Dashboard</a>
+  <a href="login.html">Dashboard</a>
 </footer>
 
 <!-- Password / Call Modal -->
